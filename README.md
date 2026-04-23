@@ -57,22 +57,35 @@ pip install -r requirements.txt
 # Sanity: just compute γ for 5 configs (~30 sec on Mac)
 python cag_gamma.py
 
-# Quick smoke (3 configs, 300 samples, ~3 min)
-python experiment.py --quick
+# Main experiment: surrogate-gradient training (5 configs × 1 seed)
+python experiment_sg.py --quick          # 3 configs, ~3 min
+python experiment_sg.py                  # full 5 configs, ~15 min CPU / ~3 min GPU
 
-# Full experiment (5 configs, 1000 samples, ~15 min CPU / ~3 min GPU)
-python experiment.py
+# Ablation: 10 configs × 3 seeds + partial-correlation controls (~1 h on GPU)
+python ablations.py --quick              # 4 configs × 2 seeds, ~10 min
+python ablations.py                      # full 10 × 3 = 30 runs, ~1 h on 4060
 ```
 
-Output: `results.json` with per-config (γ, convergence_step, final_acc), plus
-`results_stats.json` with Spearman ρ, log-log fit slope, R², and go/no-go verdict.
+Output:
+- `results_sg.json` / `results_sg_stats.json`: main experiment
+- `results_ablation.json` / `results_ablation_stats.json`: ablation + partial correlations
 
 ## Go / no-go (locked precommit)
 
+**Main experiment:**
 - STRONG GO: Spearman ρ(γ, conv_step) < −0.7 AND log-log fit R² > 0.6
-- GO: ρ < −0.7 (monotone inverse relation, may not fit log-log cleanly)
+- GO: ρ < −0.7 (monotone inverse, may not fit log-log cleanly)
 - PARTIAL: ρ in [−0.7, −0.3]
 - NO-GO: ρ > −0.3 or sign reversed
+
+**Ablation (after main):**
+- STRONG: raw ρ(γ) survives partial-correlation control for P (partial-ρ > 0.5 in magnitude)
+- WEAK: raw ρ(γ) strong but partial-ρ near 0 — γ is a proxy for param count
+- PARTIAL: partial-ρ in (0.3, 0.5)
+- INCONCLUSIVE: raw ρ(γ) weak
+
+**Initial 5-config run (tomdif's RTX 4060, 2026-04-22):**
+Spearman ρ = −0.894, log-log R² = 0.798 → STRONG GO on main. Ablation pending.
 
 ## File layout
 
